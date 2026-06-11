@@ -1,0 +1,398 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MDCAT AI Prep Bot 🎓</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.2/babel.min.js"></script>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{background:#060b18;color:#e2e8f0;font-family:'Segoe UI',sans-serif;min-height:100vh}
+  button{cursor:pointer;transition:opacity .2s}
+  button:hover{opacity:.85}
+  input,select{outline:none}
+  ::-webkit-scrollbar{width:6px}
+  ::-webkit-scrollbar-thumb{background:rgba(167,139,250,.3);border-radius:3px}
+  @keyframes fadeIn{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+  @keyframes bounce{0%,100%{transform:translateY(0)}50%{transform:translateY(-8px)}}
+  .fade{animation:fadeIn .4s ease}
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel">
+
+const SUBJECTS = [
+  {id:"bio",label:"Biology",emoji:"🧬",color:"#22c55e",topics:["Cell Biology","Genetics","Evolution","Ecology","Human Physiology"]},
+  {id:"chem",label:"Chemistry",emoji:"⚗️",color:"#3b82f6",topics:["Atomic Structure","Chemical Bonding","Organic Chemistry","Acids & Bases"]},
+  {id:"phy",label:"Physics",emoji:"⚡",color:"#f59e0b",topics:["Mechanics","Waves","Thermodynamics","Electromagnetism"]},
+  {id:"eng",label:"English",emoji:"📝",color:"#ec4899",topics:["Grammar","Vocabulary","Comprehension","Synonyms"]},
+  {id:"lr",label:"Logical Reasoning",emoji:"🧠",color:"#a78bfa",topics:["Patterns","Analogies","Number Series","Syllogisms"]},
+];
+
+const QUESTIONS = {
+  bio:[
+    {q:"Which organelle is called the 'powerhouse of the cell'?",opts:["Nucleus","Mitochondria","Ribosome","Golgi Apparatus"],ans:1,topic:"Cell Biology",diff:"Easy"},
+    {q:"DNA replication occurs during which phase?",opts:["G1","G2","S phase","M phase"],ans:2,topic:"Cell Biology",diff:"Medium"},
+    {q:"Which RNA carries amino acids to ribosome?",opts:["mRNA","rRNA","tRNA","snRNA"],ans:2,topic:"Biochemistry",diff:"Easy"},
+    {q:"Law of segregation was proposed by:",opts:["Darwin","Mendel","Watson","Morgan"],ans:1,topic:"Genetics",diff:"Easy"},
+    {q:"Which enzyme unwinds DNA during replication?",opts:["DNA Polymerase","Ligase","Helicase","Primase"],ans:2,topic:"Genetics",diff:"Hard"},
+  ],
+  chem:[
+    {q:"Atomic number of Carbon is:",opts:["6","12","8","4"],ans:0,topic:"Atomic Structure",diff:"Easy"},
+    {q:"Which bond forms by sharing electrons?",opts:["Ionic","Covalent","Metallic","Hydrogen"],ans:1,topic:"Chemical Bonding",diff:"Easy"},
+    {q:"pH of pure water at 25°C is:",opts:["0","7","14","1"],ans:1,topic:"Acids & Bases",diff:"Easy"},
+    {q:"Gas produced when Zinc reacts with HCl:",opts:["Oxygen","Carbon dioxide","Hydrogen","Nitrogen"],ans:2,topic:"Acids & Bases",diff:"Medium"},
+    {q:"Hybridization of carbon in methane (CH4):",opts:["sp","sp2","sp3","sp3d"],ans:2,topic:"Organic Chemistry",diff:"Medium"},
+  ],
+  phy:[
+    {q:"SI unit of force is:",opts:["Watt","Joule","Newton","Pascal"],ans:2,topic:"Mechanics",diff:"Easy"},
+    {q:"Speed of light in vacuum is approximately:",opts:["3×10⁶ m/s","3×10⁸ m/s","3×10¹⁰ m/s","3×10⁴ m/s"],ans:1,topic:"Modern Physics",diff:"Easy"},
+    {q:"Every action has equal and opposite reaction — which law?",opts:["Newton's 1st","Newton's 2nd","Newton's 3rd","Gravitation"],ans:2,topic:"Mechanics",diff:"Easy"},
+    {q:"Frequency 50Hz — time period is:",opts:["50s","0.02s","2s","0.5s"],ans:1,topic:"Waves",diff:"Medium"},
+    {q:"Transformer works on principle of:",opts:["Self-induction","Mutual induction","Magnetic effect","Electric effect"],ans:1,topic:"Electromagnetism",diff:"Hard"},
+  ],
+  eng:[
+    {q:"Synonym of 'Benevolent':",opts:["Cruel","Kind","Angry","Lazy"],ans:1,topic:"Synonyms",diff:"Easy"},
+    {q:"She ___ to market yesterday.",opts:["go","goes","went","going"],ans:2,topic:"Tenses",diff:"Easy"},
+    {q:"Grammatically correct sentence:",opts:["He don't know","He doesn't knows","He doesn't know","He not know"],ans:2,topic:"Grammar",diff:"Easy"},
+    {q:"Antonym of 'Verbose':",opts:["Talkative","Concise","Loud","Shy"],ans:1,topic:"Antonyms",diff:"Medium"},
+    {q:"'Good AT mathematics' — preposition indicates:",opts:["Direction","Time","Subject/Field","Place"],ans:2,topic:"Prepositions",diff:"Medium"},
+  ],
+  lr:[
+    {q:"Next in series: 2,4,8,16,___?",opts:["24","32","30","28"],ans:1,topic:"Number Series",diff:"Easy"},
+    {q:"Dog:Kennel :: Bird:?",opts:["Nest","Cage","Tree","Sky"],ans:0,topic:"Analogies",diff:"Easy"},
+    {q:"All roses are flowers, some flowers fade — therefore:",opts:["All roses fade","Some roses may fade","No roses fade","All flowers are roses"],ans:1,topic:"Syllogisms",diff:"Medium"},
+    {q:"If CAT=24, then DOG=?",opts:["26","27","28","30"],ans:2,topic:"Coding-Decoding",diff:"Hard"},
+    {q:"Odd one out: Apple, Mango, Carrot, Banana",opts:["Apple","Mango","Carrot","Banana"],ans:2,topic:"Patterns",diff:"Easy"},
+  ],
+};
+
+const shuffle = arr => [...arr].sort(()=>Math.random()-.5);
+const allQ = () => Object.values(QUESTIONS).flat();
+
+function App() {
+  const [screen, setScreen] = React.useState("home");
+  const [subject, setSubject] = React.useState(null);
+  const [questions, setQuestions] = React.useState([]);
+  const [current, setCurrent] = React.useState(0);
+  const [selected, setSelected] = React.useState(null);
+  const [answered, setAnswered] = React.useState([]);
+  const [score, setScore] = React.useState(0);
+  const [aiExp, setAiExp] = React.useState("");
+  const [loadingExp, setLoadingExp] = React.useState(false);
+  const [chat, setChat] = React.useState([{role:"ai",text:"Assalam o Alaikum! 👋 Main tumhara MDCAT AI tutor hun. Koi bhi topic pocho — Biology, Chemistry, Physics, English ya Logical Reasoning!"}]);
+  const [chatInput, setChatInput] = React.useState("");
+  const [chatLoading, setChatLoading] = React.useState(false);
+  const [mockTime, setMockTime] = React.useState(40*60);
+  const [mockRunning, setMockRunning] = React.useState(false);
+  const [progress, setProgress] = React.useState({});
+  const chatEndRef = React.useRef(null);
+  const timerRef = React.useRef(null);
+
+  React.useEffect(()=>{
+    if(mockRunning && mockTime>0){
+      timerRef.current=setInterval(()=>setMockTime(t=>t-1),1000);
+    } else if(mockTime===0 && mockRunning) finish();
+    return ()=>clearInterval(timerRef.current);
+  },[mockRunning,mockTime]);
+
+  React.useEffect(()=>{ chatEndRef.current?.scrollIntoView({behavior:"smooth"}); },[chat]);
+
+  const startPractice = (subj) => {
+    setSubject(subj);
+    setQuestions(shuffle(QUESTIONS[subj.id]).slice(0,5));
+    setCurrent(0); setSelected(null); setAnswered([]); setScore(0); setAiExp("");
+    setScreen("practice");
+  };
+
+  const startMock = () => {
+    setSubject(null);
+    setQuestions(shuffle(allQ()).slice(0,20));
+    setCurrent(0); setSelected(null); setAnswered([]); setScore(0); setAiExp("");
+    setMockTime(40*60); setMockRunning(true);
+    setScreen("mock");
+  };
+
+  const handleAnswer = (i) => {
+    if(selected!==null) return;
+    setSelected(i);
+    const q=questions[current];
+    const correct=i===q.ans;
+    if(correct) setScore(s=>s+1);
+    setAnswered(prev=>[...prev,{...q,chosen:i,correct}]);
+    if(screen==="practice") fetchExp(q,i);
+  };
+
+  const fetchExp = async(q,chosen) => {
+    setLoadingExp(true); setAiExp("");
+    try {
+      const res = await fetch("https://api.anthropic.com/v1/messages",{
+        method:"POST",
+        headers:{"Content-Type":"application/json"},
+        body:JSON.stringify({
+          model:"claude-sonnet-4-20250514",
+          max_tokens:1000,
+          system:"You are an expert MDCAT tutor for Pakistani students. Give clear explanation in simple English mixed with Urdu. Max 100 words. Be encouraging and exam-focused.",
+          messages:[{role:"user",content:`MCQ: "${q.q}"\nOptions: ${q.opts.join(", ")}\nCorrect: ${q.opts[q.ans]}\nStudent chose: ${q.opts[chosen]}\nCorrect: ${chosen===q.ans}\n\nExplain why correct answer is right.`}]
+        })
+      });
+      const data=await res.json();
+      setAiExp(data.content?.map(c=>c.text||"").join("")||"");
+    } catch { setAiExp("Explanation load nahi ho saki!"); }
+    setLoadingExp(false);
+  };
+
+  const nextQ = () => {
+    if(current<questions.length-1){ setCurrent(c=>c+1); setSelected(null); setAiExp(""); }
+    else finish();
+  };
+
+  const finish = () => {
+    clearInterval(timerRef.current); setMockRunning(false);
+    const id=subject?.id||"mock";
+    setProgress(prev=>({...prev,[id]:{attempts:(prev[id]?.attempts||0)+1,lastScore:Math.round((score/questions.length)*100)}}));
+    setScreen("results");
+  };
+
+  const sendChat = async() => {
+    if(!chatInput.trim()||chatLoading) return;
+    const msg=chatInput.trim(); setChatInput("");
+    setChat(h=>[...h,{role:"user",text:msg}]);
+    setChatLoading(true);
+    try {
+      const msgs=chat.filter((_,i)=>i>0).map(m=>({role:m.role==="user"?"user":"assistant",content:m.text}));
+      const res=await fetch("https://api.anthropic.com/v1/messages",{
+        method:"POST",
+        headers:{"Content-Type":"application/json"},
+        body:JSON.stringify({
+          model:"claude-sonnet-4-20250514",
+          max_tokens:1000,
+          system:"You are expert MDCAT tutor for Pakistani students. Answer Biology, Chemistry, Physics, English, LR questions. Mix English with simple Urdu. Be concise and exam-focused.",
+          messages:[...msgs,{role:"user",content:msg}]
+        })
+      });
+      const data=await res.json();
+      setChat(h=>[...h,{role:"ai",text:data.content?.map(c=>c.text||"").join("")||"Error!"}]);
+    } catch { setChat(h=>[...h,{role:"ai",text:"Internet check karo! 🔄"}]); }
+    setChatLoading(false);
+  };
+
+  const fmt=s=>`${String(Math.floor(s/60)).padStart(2,"0")}:${String(s%60).padStart(2,"0")}`;
+
+  const S = {
+    page:{minHeight:"100vh",background:"#060b18",color:"#e2e8f0"},
+    nav:{background:"rgba(6,11,24,.95)",borderBottom:"1px solid rgba(255,255,255,.08)",padding:"14px 20px",display:"flex",justifyContent:"space-between",alignItems:"center",position:"sticky",top:0,zIndex:100},
+    brand:{fontSize:"18px",fontWeight:800,background:"linear-gradient(90deg,#38bdf8,#818cf8)",WebkitBackgroundClip:"text",WebkitTextFillColor:"transparent"},
+    wrap:{maxWidth:"720px",margin:"0 auto",padding:"0 16px"},
+    card:{background:"rgba(255,255,255,.05)",border:"1px solid rgba(255,255,255,.08)",borderRadius:"18px",padding:"20px",marginBottom:"16px"},
+    btn:(bg)=>({background:bg||"#818cf8",border:"none",borderRadius:"12px",padding:"12px 22px",color:"#fff",fontWeight:700,fontSize:"15px",cursor:"pointer"}),
+    tag:(c)=>({background:c+"22",color:c,border:`1px solid ${c}44`,borderRadius:"8px",padding:"3px 10px",fontSize:"12px",fontWeight:600,display:"inline-block"}),
+  };
+
+  // HOME
+  if(screen==="home") return (
+    <div style={S.page}>
+      <nav style={S.nav}>
+        <span style={S.brand}>🎓 MDCAT AI Prep</span>
+        <button onClick={()=>setScreen("chat")} style={{...S.btn("#1e40af"),padding:"8px 14px",fontSize:"13px"}}>💬 AI Tutor</button>
+      </nav>
+      <div style={S.wrap}>
+        <div style={{textAlign:"center",padding:"36px 0 28px"}}>
+          <div style={{fontSize:"56px",marginBottom:"12px"}}>🏆</div>
+          <h1 style={{fontSize:"clamp(24px,5vw,36px)",fontWeight:900,margin:"0 0 10px"}}>
+            MDCAT <span style={{background:"linear-gradient(90deg,#38bdf8,#818cf8)",WebkitBackgroundClip:"text",WebkitTextFillColor:"transparent"}}>AI Prep Bot</span>
+          </h1>
+          <p style={{color:"#94a3b8",fontSize:"15px",margin:"0 0 24px"}}>AI-powered • Instant Explanations • Mock Tests • 5 Subjects</p>
+          <div style={{display:"flex",gap:"10px",justifyContent:"center",flexWrap:"wrap"}}>
+            <button onClick={startMock} style={{...S.btn("linear-gradient(135deg,#f59e0b,#ef4444)"),fontSize:"16px",padding:"14px 28px"}}>🔥 Mock Test (20 Qs)</button>
+            <button onClick={()=>setScreen("chat")} style={{...S.btn("#1e293b"),border:"1px solid rgba(255,255,255,.15)"}}>💬 Ask AI Tutor</button>
+          </div>
+        </div>
+
+        <h2 style={{fontSize:"13px",color:"#94a3b8",fontWeight:700,letterSpacing:"1px",marginBottom:"12px"}}>PRACTICE BY SUBJECT</h2>
+        {SUBJECTS.map(subj=>{
+          const p=progress[subj.id];
+          return(
+            <div key={subj.id} style={{...S.card,cursor:"pointer",display:"flex",alignItems:"center",gap:"16px"}} onClick={()=>startPractice(subj)}>
+              <div style={{width:"48px",height:"48px",borderRadius:"14px",background:subj.color+"22",display:"flex",alignItems:"center",justifyContent:"center",fontSize:"24px",flexShrink:0}}>{subj.emoji}</div>
+              <div style={{flex:1}}>
+                <div style={{fontWeight:700,fontSize:"16px",marginBottom:"4px"}}>{subj.label}</div>
+                <div style={{fontSize:"12px",color:"#64748b"}}>{subj.topics.join(" • ")}</div>
+              </div>
+              <div style={{textAlign:"right",flexShrink:0}}>
+                {p?<span style={S.tag(subj.color)}>{p.lastScore}%</span>:<span style={S.tag("#64748b")}>Start →</span>}
+              </div>
+            </div>
+          );
+        })}
+
+        <div style={{...S.card,background:"rgba(56,189,248,.06)",borderColor:"rgba(56,189,248,.2)"}}>
+          <h3 style={{margin:"0 0 12px",fontSize:"15px",color:"#38bdf8"}}>💡 MDCAT Tips</h3>
+          {["Biology has most weightage (58%) — focus here first","Practice MCQs daily for pattern recognition","Physics: master formulas and derivations","English: learn 10 new words daily","Mock tests improve speed and accuracy"].map((t,i)=>(
+            <div key={i} style={{display:"flex",gap:"10px",marginBottom:"8px",fontSize:"13px",color:"#94a3b8"}}>
+              <span style={{color:"#38bdf8",flexShrink:0}}>→</span>{t}
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+
+  // PRACTICE / MOCK
+  if(screen==="practice"||screen==="mock"){
+    const q=questions[current];
+    if(!q) return null;
+    const done=selected!==null;
+    return(
+      <div style={S.page}>
+        <nav style={S.nav}>
+          <button onClick={()=>{clearInterval(timerRef.current);setScreen("home");}} style={{background:"none",border:"none",color:"#94a3b8",cursor:"pointer",fontSize:"14px"}}>← Back</button>
+          <span style={S.brand}>{screen==="mock"?"🔥 Mock Test":`${subject?.emoji} ${subject?.label}`}</span>
+          {screen==="mock"&&<span style={{color:mockTime<300?"#ef4444":"#f59e0b",fontWeight:700}}>⏱ {fmt(mockTime)}</span>}
+        </nav>
+        <div style={S.wrap}>
+          <div style={{padding:"16px 0 8px",display:"flex",alignItems:"center",gap:"12px"}}>
+            <span style={{fontSize:"13px",color:"#64748b"}}>{current+1}/{questions.length}</span>
+            <div style={{flex:1,height:"6px",background:"rgba(255,255,255,.08)",borderRadius:"3px",overflow:"hidden"}}>
+              <div style={{height:"100%",width:`${(current/questions.length)*100}%`,background:"linear-gradient(90deg,#38bdf8,#818cf8)",borderRadius:"3px",transition:"width .3s"}}/>
+            </div>
+            <span style={{fontSize:"13px",color:"#22c55e"}}>✓ {score}</span>
+          </div>
+
+          <div style={{display:"flex",gap:"8px",marginBottom:"14px"}}>
+            <span style={S.tag("#38bdf8")}>{q.topic}</span>
+            <span style={S.tag(q.diff==="Easy"?"#22c55e":q.diff==="Medium"?"#f59e0b":"#ef4444")}>{q.diff}</span>
+          </div>
+
+          <div style={{...S.card,background:"rgba(56,189,248,.05)",borderColor:"rgba(56,189,248,.15)"}}>
+            <p style={{margin:0,fontSize:"clamp(15px,3vw,18px)",fontWeight:600,lineHeight:1.6}}>{q.q}</p>
+          </div>
+
+          {q.opts.map((opt,i)=>{
+            let bg="rgba(255,255,255,.05)",border="1px solid rgba(255,255,255,.08)",color="#e2e8f0";
+            if(done){
+              if(i===q.ans){bg="rgba(34,197,94,.15)";border="1px solid #22c55e";color="#86efac";}
+              else if(i===selected&&selected!==q.ans){bg="rgba(239,68,68,.15)";border="1px solid #ef4444";color="#fca5a5";}
+            }
+            return(
+              <div key={i} onClick={()=>handleAnswer(i)} style={{...S.card,margin:"0 0 10px",cursor:done?"default":"pointer",background:bg,border,color,display:"flex",alignItems:"center",gap:"14px",padding:"14px 16px"}}>
+                <span style={{width:"28px",height:"28px",borderRadius:"50%",background:done&&i===q.ans?"#22c55e":"rgba(255,255,255,.08)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:"13px",fontWeight:700,flexShrink:0}}>
+                  {done&&i===q.ans?"✓":done&&i===selected?"✗":String.fromCharCode(65+i)}
+                </span>
+                <span>{opt}</span>
+              </div>
+            );
+          })}
+
+          {done&&screen==="practice"&&(
+            <div style={{...S.card,background:"rgba(129,140,248,.08)",borderColor:"rgba(129,140,248,.25)"}}>
+              <div style={{display:"flex",alignItems:"center",gap:"8px",marginBottom:"10px"}}>
+                <span>🤖</span><span style={{fontWeight:700,fontSize:"14px",color:"#a5b4fc"}}>AI Explanation</span>
+                {loadingExp&&<div style={{display:"flex",gap:"4px"}}>{[0,1,2].map(i=><div key={i} style={{width:"7px",height:"7px",borderRadius:"50%",background:"#818cf8",animation:`bounce 1s ${i*.2}s infinite`}}/>)}</div>}
+              </div>
+              {!loadingExp&&<p style={{margin:0,fontSize:"14px",lineHeight:1.7,color:"#cbd5e1"}}>{aiExp}</p>}
+            </div>
+          )}
+
+          {done&&(
+            <button onClick={nextQ} style={{...S.btn("linear-gradient(135deg,#818cf8,#6d28d9)"),width:"100%",padding:"14px",fontSize:"16px",marginTop:"8px"}}>
+              {current<questions.length-1?"Next Question →":"See Results 🏆"}
+            </button>
+          )}
+        </div>
+      </div>
+    );
+  }
+
+  // RESULTS
+  if(screen==="results"){
+    const pct=Math.round((score/questions.length)*100);
+    return(
+      <div style={S.page}>
+        <nav style={S.nav}><span style={S.brand}>🏆 Results</span></nav>
+        <div style={S.wrap}>
+          <div style={{textAlign:"center",padding:"32px 0 24px"}}>
+            <div style={{fontSize:"64px",marginBottom:"12px"}}>{pct>=80?"🥇":pct>=60?"🥈":"📚"}</div>
+            <div style={{fontSize:"56px",fontWeight:900,background:pct>=80?"linear-gradient(90deg,#22c55e,#38bdf8)":"linear-gradient(90deg,#818cf8,#6d28d9)",WebkitBackgroundClip:"text",WebkitTextFillColor:"transparent"}}>{pct}%</div>
+            <p style={{color:"#94a3b8",fontSize:"17px",margin:"8px 0 0"}}>{pct>=80?"Zabardast! 🔥":pct>=60?"Acha hai! 👍 Keep it up!":"Practice more karo! 💪"}</p>
+          </div>
+
+          <div style={{...S.card,display:"grid",gridTemplateColumns:"repeat(3,1fr)",textAlign:"center",gap:"8px"}}>
+            <div><div style={{fontSize:"24px",fontWeight:800,color:"#22c55e"}}>{score}</div><div style={{fontSize:"12px",color:"#64748b"}}>Correct</div></div>
+            <div><div style={{fontSize:"24px",fontWeight:800,color:"#ef4444"}}>{questions.length-score}</div><div style={{fontSize:"12px",color:"#64748b"}}>Wrong</div></div>
+            <div><div style={{fontSize:"24px",fontWeight:800,color:"#38bdf8"}}>{questions.length}</div><div style={{fontSize:"12px",color:"#64748b"}}>Total</div></div>
+          </div>
+
+          <h3 style={{fontSize:"14px",color:"#64748b",letterSpacing:"1px",fontWeight:700,marginBottom:"10px"}}>REVIEW</h3>
+          {answered.map((a,i)=>(
+            <div key={i} style={{...S.card,borderColor:a.correct?"rgba(34,197,94,.3)":"rgba(239,68,68,.2)",marginBottom:"10px"}}>
+              <div style={{display:"flex",gap:"8px",marginBottom:"6px"}}>
+                <span>{a.correct?"✅":"❌"}</span>
+                <span style={{fontSize:"14px",fontWeight:500}}>{a.q}</span>
+              </div>
+              {!a.correct&&<div style={{fontSize:"13px",color:"#94a3b8"}}>✓ Correct: <span style={{color:"#86efac",fontWeight:600}}>{a.opts[a.ans]}</span></div>}
+            </div>
+          ))}
+
+          <div style={{display:"flex",gap:"10px",marginTop:"8px"}}>
+            <button onClick={()=>setScreen("home")} style={{...S.btn("#1e293b"),flex:1,border:"1px solid rgba(255,255,255,.1)"}}>🏠 Home</button>
+            <button onClick={()=>subject?startPractice(subject):startMock()} style={{...S.btn("linear-gradient(135deg,#818cf8,#6d28d9)"),flex:1}}>🔄 Try Again</button>
+          </div>
+          <button onClick={()=>setScreen("chat")} style={{...S.btn("#0f172a"),width:"100%",marginTop:"10px",border:"1px solid rgba(56,189,248,.3)",color:"#38bdf8"}}>💬 Ask AI Tutor</button>
+        </div>
+      </div>
+    );
+  }
+
+  // CHAT
+  if(screen==="chat") return(
+    <div style={{...S.page,display:"flex",flexDirection:"column",height:"100vh"}}>
+      <nav style={S.nav}>
+        <button onClick={()=>setScreen("home")} style={{background:"none",border:"none",color:"#94a3b8",cursor:"pointer",fontSize:"14px"}}>← Back</button>
+        <span style={S.brand}>💬 AI Tutor</span>
+        <span style={{fontSize:"12px",color:"#22c55e"}}>● Online</span>
+      </nav>
+
+      <div style={{padding:"10px 16px",display:"flex",gap:"8px",overflowX:"auto",borderBottom:"1px solid rgba(255,255,255,.06)"}}>
+        {["DNA Replication explain karo","pH kya hota hai?","Newton's Laws","MDCAT Biology tips","Organic Chemistry basics"].map(t=>(
+          <button key={t} onClick={()=>setChatInput(t)} style={{background:"rgba(56,189,248,.1)",border:"1px solid rgba(56,189,248,.2)",borderRadius:"20px",padding:"4px 12px",color:"#38bdf8",fontSize:"12px",cursor:"pointer",whiteSpace:"nowrap"}}>{t}</button>
+        ))}
+      </div>
+
+      <div style={{flex:1,overflowY:"auto",padding:"16px",display:"flex",flexDirection:"column",gap:"12px"}}>
+        {chat.map((msg,i)=>(
+          <div key={i} style={{display:"flex",justifyContent:msg.role==="user"?"flex-end":"flex-start",gap:"8px"}}>
+            {msg.role==="ai"&&<div style={{width:"32px",height:"32px",borderRadius:"50%",background:"linear-gradient(135deg,#38bdf8,#818cf8)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:"16px",flexShrink:0}}>🎓</div>}
+            <div style={{maxWidth:"80%",background:msg.role==="user"?"linear-gradient(135deg,#818cf8,#6d28d9)":"rgba(255,255,255,.07)",borderRadius:msg.role==="user"?"18px 18px 4px 18px":"18px 18px 18px 4px",padding:"12px 16px",fontSize:"14px",lineHeight:1.7,border:msg.role==="ai"?"1px solid rgba(255,255,255,.08)":"none",whiteSpace:"pre-wrap"}}>{msg.text}</div>
+          </div>
+        ))}
+        {chatLoading&&(
+          <div style={{display:"flex",gap:"8px",alignItems:"center"}}>
+            <div style={{width:"32px",height:"32px",borderRadius:"50%",background:"linear-gradient(135deg,#38bdf8,#818cf8)",display:"flex",alignItems:"center",justifyContent:"center"}}>🎓</div>
+            <div style={{background:"rgba(255,255,255,.07)",borderRadius:"18px 18px 18px 4px",padding:"12px 16px",display:"flex",gap:"6px"}}>
+              {[0,1,2].map(i=><div key={i} style={{width:"8px",height:"8px",borderRadius:"50%",background:"#818cf8",animation:`bounce 1s ${i*.2}s infinite`}}/>)}
+            </div>
+          </div>
+        )}
+        <div ref={chatEndRef}/>
+      </div>
+
+      <div style={{padding:"12px 16px",borderTop:"1px solid rgba(255,255,255,.08)",display:"flex",gap:"10px",background:"rgba(6,11,24,.95)"}}>
+        <input value={chatInput} onChange={e=>setChatInput(e.target.value)} onKeyDown={e=>e.key==="Enter"&&sendChat()}
+          placeholder="Koi bhi sawaal pocho... 🧬⚗️⚡"
+          style={{flex:1,background:"rgba(255,255,255,.08)",border:"1px solid rgba(255,255,255,.12)",borderRadius:"14px",padding:"12px 16px",color:"#e2e8f0",fontSize:"15px"}}/>
+        <button onClick={sendChat} disabled={chatLoading} style={{...S.btn("linear-gradient(135deg,#38bdf8,#818cf8)"),padding:"12px 18px",flexShrink:0}}>{chatLoading?"...":"Send"}</button>
+      </div>
+    </div>
+  );
+
+  return null;
+}
+
+ReactDOM.render(<App/>, document.getElementById("root"));
+</script>
+</body>
+</html>
